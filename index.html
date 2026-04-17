@@ -497,7 +497,7 @@ function render(){
   app.appendChild(brow);
 }
 
-function renderRules(app, from){
+function renderRules(app){
   const wrap=document.createElement('div');wrap.className='rules-page';
 
   const back=document.createElement('button');back.className='rules-back';
@@ -505,8 +505,8 @@ function renderRules(app, from){
   back.onclick=()=>{currentPage='game';render()};
   wrap.appendChild(back);
 
-  wrap.innerHTML+=`<h1>게임 룰</h1>`;
-  wrap.appendChild(back);
+  const h1=document.createElement('h1');h1.textContent='게임 룰';h1.style.marginBottom='16px';
+  wrap.appendChild(h1);
 
   const sections=[
     {
