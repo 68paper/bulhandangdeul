@@ -585,6 +585,8 @@ function renderRules(app){
 
 // 렌더에 룰 버튼 추가 (setupState에 page 관리)
 let currentPage='game'; // 'game' | 'rules'
+
+function renderSetup(app){
   const wrap=document.createElement('div');wrap.className='setup';
   wrap.innerHTML='<h1>불한당들 <span style="font-size:14px;font-weight:400;color:var(--text2)">Bul-han-dang-deul · Scoundrels</span></h1><p class="sub">플레이어와 세계관을 설정하세요</p>';
 
