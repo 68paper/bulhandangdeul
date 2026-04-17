@@ -1,5 +1,12 @@
-const CACHE = 'scoundrel-v1';
-const FILES = ['/', '/index.html', '/manifest.json'];
+const CACHE = 'bulhandangdeul-v1';
+const FILES = [
+  '/bulhandangdeul/',
+  '/bulhandangdeul/index.html',
+  '/bulhandangdeul/manifest.json',
+  '/bulhandangdeul/sw.js',
+  '/bulhandangdeul/icon-192.png',
+  '/bulhandangdeul/icon-512.png',
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
@@ -15,6 +22,6 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => caches.match('/index.html')))
+    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => caches.match('/bulhandangdeul/index.html')))
   );
 });
