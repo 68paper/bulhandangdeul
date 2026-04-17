@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#185FA5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="불한당들">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>불한당들 — Scoundrels</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --cw:68px;--ch:96px;--r:8px;
+  --bg:#f9f9f8;--surface:#ffffff;--surface2:#f3f2ef;
+  --border:#e0ddd6;--border2:#ccc9c0;
+  --text:#1a1a18;--text2:#6b6960;--text3:#9b9890;
+  --blue:#185FA5;--blue-bg:#E6F1FB;--blue-text:#0C447C;
+  --green:#3B6D11;--green-bg:#EAF3DE;
+  --red:#A32D2D;--red-bg:#FCEBEB;
+  --amber:#BA7517;
+  --card-shadow:0 1px 3px rgba(0,0,0,.08);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#1a1a18;--surface:#242422;--surface2:#2e2e2b;
+    --border:#3a3a36;--border2:#4a4a45;
+    --text:#f0ede8;--text2:#9b9890;--text3:#6b6960;
+    --blue:#378ADD;--blue-bg:#042C53;--blue-text:#B5D4F4;
+    --green:#639922;--green-bg:#173404;
+    --red:#E24B4A;--red-bg:#501313;
+    --amber:#EF9F27;
+    --card-shadow:0 1px 3px rgba(0,0,0,.3);
+  }
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow-x:hidden}
+#app{max-width:480px;margin:0 auto;padding:16px 14px;min-height:100vh}
+
+/* 타이포 */
+h1{font-size:22px;font-weight:600;letter-spacing:-.3px}
+.label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+
+/* 버튼 */
+button{font-family:inherit;font-size:13px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);color:var(--text);padding:8px 14px;cursor:pointer;transition:background .12s,transform .08s;-webkit-appearance:none}
+button:active{transform:scale(.96)}
+button:disabled{opacity:.38;cursor:not-allowed}
+button.pri{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:500}
+button.sec{background:var(--surface2);border-color:var(--border)}
+button.dng{border-color:var(--red);color:var(--red)}
+button.grn{border-color:var(--green);color:var(--green)}
+
+/* 카드 */
+.card{width:var(--cw);height:var(--ch);border-radius:var(--r);border:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:transform .15s;user-select:none;flex-shrink:0;box-shadow:var(--card-shadow)}
+.card:active:not(.dis):not(.emp):not(.used):not(.carry){transform:scale(.94)}
+.card.dis{opacity:.4;cursor:not-allowed}
+.card.emp{border-style:dashed;cursor:default;opacity:.3;box-shadow:none}
+.card.used{background:var(--surface2);cursor:default;opacity:.2;box-shadow:none}
+.card.carry{background:var(--surface2);cursor:default;border-style:dashed}
+.cs{font-size:22px;line-height:1}
+.cv{font-size:17px;font-weight:600;line-height:1.2}
+.ct{font-size:10px;color:var(--text2);margin-top:2px}
+.card.mon .cs,.card.mon .cv{color:#C0392B}
+.card.wpn .cs,.card.wpn .cv{color:var(--blue)}
+.card.pot .cs,.card.pot .cv{color:var(--green)}
+
+/* 플레이어 패널 */
+.players{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.pcard{flex:1;min-width:130px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);padding:10px 12px;transition:border-color .2s,background .2s}
+.pcard.active{border-color:var(--blue);background:var(--surface)}
+.pcard.dead{opacity:.4}
+.pcard.solo{min-width:100%;max-width:280px}
+.pname{font-size:13px;font-weight:500;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.pturn{width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0}
+.php{font-size:22px;font-weight:600;line-height:1;letter-spacing:-.5px}
+.php span{font-size:12px;font-weight:400;color:var(--text2)}
+.phbw{width:100%;height:5px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:5px}
+.phb{height:100%;border-radius:99px;transition:width .4s,background .4s}
+.pheader{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:5px;gap:6px}
+.wpn-badge{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:99px;font-size:11px;font-weight:500;flex-shrink:0;white-space:nowrap}
+.wpn-badge.equipped{background:var(--blue-bg);color:var(--blue-text);border:1px solid var(--blue)}
+.wpn-badge.empty{background:var(--surface2);color:var(--text3);border:1px dashed var(--border2)}
+.wpn-limit{font-size:10px;color:var(--text2);margin-top:4px}
+.tag{background:var(--blue-bg);color:var(--blue-text);border-radius:4px;padding:2px 6px;font-size:11px;font-weight:500}
+.tag.grn{background:var(--green-bg);color:var(--green)}
+
+/* 로그 */
+.log{background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);padding:10px 13px;font-size:12px;color:var(--text2);min-height:38px;line-height:1.6;margin-bottom:12px}
+.log b{color:var(--text);font-weight:500}
+
+/* 방 */
+.room-cards{display:flex;gap:8px;margin-bottom:10px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+
+/* 버튼 행 */
+.brow{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+
+/* 오버레이 */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.sheet{background:var(--surface);border-radius:18px 18px 0 0;padding:24px 20px calc(20px + env(safe-area-inset-bottom));width:100%;max-width:480px}
+.sheet h2{font-size:17px;font-weight:600;margin-bottom:6px;text-align:center}
+.sheet p{font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.6;text-align:center}
+.sheet-btns{display:flex;flex-direction:column;gap:8px}
+.sheet-btns button{width:100%;padding:13px;font-size:14px;font-weight:500}
+
+/* 설정 화면 */
+.setup{padding:8px 0}
+.setup h1{margin-bottom:4px}
+.setup .sub{font-size:14px;color:var(--text2);margin-bottom:24px;line-height:1.6}
+.pnum-row{display:flex;gap:10px;margin-bottom:20px}
+.pnum-btn{flex:1;height:52px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);font-size:20px;font-weight:600;cursor:pointer;transition:background .12s,border-color .12s;font-family:inherit}
+.pnum-btn.sel{border-color:var(--blue);color:var(--blue);background:var(--blue-bg)}
+.name-inputs{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.name-inputs input{padding:11px 13px;font-size:14px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);color:var(--text);font-family:inherit;outline:none;-webkit-appearance:none}
+.name-inputs input:focus{border-color:var(--blue)}
+.bg-presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.bg-preset-btn{font-size:12px;padding:5px 11px;border-radius:99px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;font-family:inherit;color:var(--text2);transition:background .12s}
+.bg-preset-btn.sel{border-color:var(--blue);color:var(--blue);background:var(--blue-bg)}
+textarea{width:100%;padding:11px 13px;font-size:13px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);color:var(--text);font-family:inherit;outline:none;resize:vertical;line-height:1.6;min-height:90px;margin-bottom:20px;-webkit-appearance:none}
+textarea:focus{border-color:var(--blue)}
+
+/* 종료 화면 */
+.over-card{background:var(--surface);border-radius:16px;border:1px solid var(--border);padding:24px 20px;text-align:center;box-shadow:var(--card-shadow)}
+.over-card h2{font-size:24px;font-weight:700;margin-bottom:6px}
+.sbig{font-size:44px;font-weight:700;margin:12px 0;letter-spacing:-1px}
+.sp{color:var(--green)}.sn{color:var(--red)}
+.logpre{background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);padding:12px 13px;font-size:11px;font-family:'Courier New',monospace;color:var(--text2);max-height:160px;overflow-y:auto;text-align:left;white-space:pre-wrap;line-height:1.6;margin:12px 0}
+
+/* 토스트 */
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:9px 18px;border-radius:99px;font-size:13px;font-weight:500;opacity:0;transition:opacity .25s;z-index:200;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* 던전 카운터 */
+.dungeon-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border)}
+
+/* 룰 페이지 */
+.rules-page{padding:4px 0 40px}
+.rules-page h1{font-size:20px;font-weight:600;margin-bottom:4px}
+.rules-back{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--blue);cursor:pointer;margin-bottom:20px;background:none;border:none;padding:0;font-family:inherit}
+.rules-back:active{opacity:.6}
+.rules-section{margin-bottom:24px}
+.rules-section h2{font-size:15px;font-weight:600;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.rules-section h3{font-size:13px;font-weight:600;margin:12px 0 6px;color:var(--text)}
+.rules-section p{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:8px}
+.rules-section ul{padding-left:18px;margin-bottom:8px}
+.rules-section ul li{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:3px}
+.rules-section b{color:var(--text);font-weight:500}
+.rules-code{background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);padding:10px 13px;font-size:12px;font-family:'Courier New',monospace;color:var(--text2);line-height:1.7;margin:8px 0;white-space:pre-wrap}
+.rules-table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+.rules-table th{text-align:left;padding:6px 10px;background:var(--surface2);color:var(--text2);font-weight:500;border-bottom:1px solid var(--border)}
+.rules-table td{padding:6px 10px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top}
+.rules-table tr:last-child td{border-bottom:none}
+.tip-box{background:var(--blue-bg);border-radius:var(--r);border:1px solid var(--blue);padding:10px 13px;margin:8px 0}
+.tip-box p{color:var(--blue-text);margin-bottom:0}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SI={C:'♣',S:'♠',D:'♦',H:'♥'};
+const RV={'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,J:11,Q:12,K:13,A:14};
+const RANKS=['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const TN={mon:'몬스터',wpn:'무기',pot:'포션'};
+
+const BG_PRESETS=[
+  {label:'⚔️ 판타지',text:'중세 판타지 세계. 고대 석조 던전 속, 횃불이 꺼져가는 복도를 탐험하는 모험가들의 이야기.'},
+  {label:'🚀 우주선',text:'심우주를 항해하던 화물선이 표류한다. 생존자들은 이상 신호가 울리는 구역을 조사해야 한다.'},
+  {label:'🏚️ 폐건물',text:'도심 외곽의 버려진 공장. 실종자 수색팀이 지하 구역에 진입했지만 무전이 끊겼다.'},
+  {label:'🧪 연구소',text:'지하 바이오 연구소에서 봉쇄령이 내려졌다. 탈출구를 찾아 격리 구역을 통과해야 한다.'},
+];
+
+function ct(c){if(!c)return null;return c.suit==='D'?'wpn':c.suit==='H'?'pot':'mon'}
+function mk(s,r){return{suit:s,rank:r,val:RV[r]}}
+function cstr(c){return c?`${SI[c.suit]}${c.rank}(${TN[ct(c)]} ${c.val})`:'없음'}
+function buildDeck(){
+  const d=[];
+  for(const s of['C','S'])for(const r of RANKS)d.push(mk(s,r));
+  for(const s of['D','H'])for(const r of['2','3','4','5','6','7','8','9','10'])d.push(mk(s,r));
+  return d;
+}
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=0|Math.random()*(i+1);[b[i],b[j]]=[b[j],b[i]]}return b}
+
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+let G={};
+let setupState={count:1,names:['플레이어 1','플레이어 2','플레이어 3','플레이어 4'],bgText:BG_PRESETS[0].text,bgPreset:0};
+let gameLog=[],turnLog={},turnNum=0;
+
+function logTurnStart(pname,room){turnNum++;turnLog={turn:turnNum,player:pname,room:[...room],actions:[],carry:null}}
+function logAction(text){if(turnLog.actions)turnLog.actions.push(text)}
+function logTurnEnd(carry){if(turnLog.actions){turnLog.carry=carry||null;gameLog.push({...turnLog})}}
+
+function buildMarkdown(){
+  const now=new Date();
+  const ds=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const solo=isSolo();
+  const names=G.players.map(p=>p.name).join(', ');
+  const result=G.won?'탈출 성공':'실패';
+  let md=`# Scoundrel 던전 탐험 기록\n\n`;
+  md+=`## 배경 설정\n\n${G.bgText}\n\n`;
+  md+=`## 게임 정보\n\n`;
+  md+=`- 날짜: ${ds}\n`;
+  md+=`- 플레이어: ${names} (${solo?'1인':`${G.players.length}인 협력`})\n`;
+  md+=`- 결과: **${result}**\n`;
+  md+=`- 최종 점수: ${G.score>=0?'+':''}${G.score}\n\n`;
+  md+=`## 최종 상태\n\n`;
+  for(const p of G.players)md+=`- ${p.name}: ${p.dead?'전투불능':'생존'} (HP ${p.hp}/${p.max})\n`;
+  md+=`\n## 턴별 기록\n\n`;
+  for(const t of gameLog){
+    md+=`### 턴 ${t.turn}${!solo?' — '+t.player:''}\n\n`;
+    md+=`- 방 구성: ${t.room.map(c=>cstr(c)).join(', ')}\n`;
+    for(const a of t.actions)md+=`- ${a}\n`;
+    if(t.carry)md+=`- 이월 카드: ${cstr(t.carry)}\n`;
+    md+=`\n`;
+  }
+  md+=`---\n\n> 이 로그는 Scoundrel 플레이 기록입니다. 위의 배경 설정과 턴별 기록을 바탕으로 AI에게 단편 소설을 요청해보세요.\n`;
+  return md;
+}
+
+function copyLog(){
+  const md=buildMarkdown();
+  if(navigator.clipboard){navigator.clipboard.writeText(md).then(()=>showToast('클립보드에 복사됐어요!'))}
+  else{const ta=document.createElement('textarea');ta.value=md;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showToast('클립보드에 복사됐어요!')}
+}
+function downloadLog(){
+  const md=buildMarkdown();
+  const blob=new Blob([md],{type:'text/markdown'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const now=new Date();
+  const ts=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+  a.href=url;a.download=`scoundrel_${ts}.md`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  showToast('다운로드 완료!');
+}
+
+function initGame(playerNames,bgText){
+  const players=playerNames.map((name,i)=>({name,hp:20,max:20,wpn:null,wlast:null,dead:false,id:i}));
+  G={dungeon:shuffle(buildDeck()),room:[],carry:null,players,cur:0,
+     lastAvoided:false,bgText,
+     log:'탐험을 시작한다.',
+     phase:'deal',proc:0,potUsed:false,over:false,won:false,score:0,lastPot:null};
+  gameLog=[];turnLog={};turnNum=0;
+  render();
+}
+
+function isSolo(){return G.players.length===1}
+function curP(){return G.players[G.cur]}
+function nextPlayer(){
+  if(isSolo())return;
+  let n=(G.cur+1)%G.players.length,tries=0;
+  while(G.players[n].dead&&tries<G.players.length){n=(n+1)%G.players.length;tries++}
+  G.cur=n;
+}
+
+function deal(){
+  G.room=[];
+  if(G.carry){G.room.push(G.carry);G.carry=null}
+  while(G.room.length<4&&G.dungeon.length>0)G.room.push(G.dungeon.shift());
+  logTurnStart(curP().name,G.room);
+  G.phase='play';G.proc=0;G.potUsed=false;G.lastPot=null;
+  render();
+}
+
+function avoid(){
+  if(G.lastAvoided){G.log='연속으로 우회할 수 없다!';render();return}
+  logTurnStart(curP().name,G.room);
+  logAction('위험 감지 — 다른 경로로 우회, 해당 구역 카드들이 뒤로 밀렸다');
+  logTurnEnd(null);
+  G.dungeon=[...G.dungeon,...G.room.filter(c=>c)];
+  G.room=[];G.carry=null;G.lastAvoided=true;
+  G.log=`<b>${curP().name}</b>이(가) 위험을 감지하고 다른 경로로 우회했다.`;
+  if(!isSolo())nextPlayer();
+  G.phase='deal';render();
+}
+
+function pickCard(idx,useWpn){
+  if(G.phase!=='play'||!G.room[idx]||G.proc>=3)return;
+  const c=G.room[idx];G.room[idx]=null;G.proc++;G.lastAvoided=false;
+  const p=curP();const type=ct(c);
+
+  if(type==='wpn'){
+    p.wpn=c;p.wlast=null;
+    const msg=`무기 장착: ${cstr(c)}`;G.log=`<b>${p.name}</b> ${msg}`;logAction(msg);
+  }else if(type==='pot'){
+    if(G.potUsed){
+      const msg=`회복 아이템 낭비: ${cstr(c)} (이번 구역 이미 사용)`;G.log=`<b>${p.name}</b> ${msg}`;logAction(msg);
+    }else{
+      const gain=Math.min(c.val,p.max-p.hp);p.hp=Math.min(p.hp+c.val,p.max);G.potUsed=true;G.lastPot=c;
+      const msg=`회복: ${cstr(c)} → 체력 +${gain} → ${p.hp}HP`;G.log=`<b>${p.name}</b> ${msg}`;logAction(msg);
+    }
+  }else{
+    const canW=p.wpn&&(p.wlast===null||c.val<=p.wlast);
+    if(useWpn&&canW){
+      const dmg=Math.max(0,c.val-p.wpn.val);p.hp-=dmg;p.wlast=c.val;
+      const msg=`무기 전투: ${cstr(c)} vs 무기${p.wpn.val} → 피해 ${dmg} → 체력 ${p.hp}HP`;G.log=`<b>${p.name}</b> ${msg}`;logAction(msg);
+    }else{
+      p.hp-=c.val;
+      const msg=`맨손 전투: ${cstr(c)} → 피해 ${c.val} → 체력 ${p.hp}HP`;G.log=`<b>${p.name}</b> ${msg}`;logAction(msg);
+    }
+  }
+
+  if(p.hp<=0){
+    p.hp=0;p.dead=true;
+    logAction(`${p.name} 탈진 — 전투불능 상태로 이탈`);
+    logTurnEnd(null);
+    endGame(false);render();return;
+  }
+
+  if(G.proc>=3){
+    const rem=G.room.filter(c=>c!==null);
+    const carryCard=rem.length===1?rem[0]:null;
+    if(carryCard){G.carry=carryCard;for(let i=0;i<G.room.length;i++)G.room[i]=null;}
+    logTurnEnd(carryCard);
+    if(G.dungeon.length===0&&!G.carry){endGame(true);render();return}
+    if(!isSolo())nextPlayer();
+    G.phase='deal';
+  }
+  render();
+}
+
+function passWeapon(){
+  if(isSolo())return;
+  const p=curP();if(!p.wpn){G.log='장착된 무기가 없다.';render();return}
+  const nextIdx=(G.cur+1)%G.players.length;
+  const np=G.players[nextIdx];
+  np.wpn=p.wpn;np.wlast=p.wlast;
+  const msg=`무기 인계: ${cstr(p.wpn)} (최근 처치 수치 ${p.wlast!==null?p.wlast:'없음'} 유지) → ${np.name}`;
+  p.wpn=null;p.wlast=null;
+  G.log=`<b>${p.name}</b>이(가) <b>${np.name}</b>에게 무기를 넘겼다.`;
+  logAction(msg);render();
+}
+
+function endGame(won){
+  G.over=true;G.won=won;
+  const totalHp=G.players.reduce((s,p)=>s+(p.dead?0:p.hp),0);
+  if(!won){
+    let rem=G.dungeon.reduce((s,c)=>ct(c)==='mon'?s+c.val:s,0);
+    rem+=G.room.filter(c=>c&&ct(c)==='mon').reduce((s,c)=>s+c.val,0);
+    if(G.carry&&ct(G.carry)==='mon')rem+=G.carry.val;
+    G.score=totalHp-rem;
+  }else{G.score=totalHp}
+}
+
+let pendingIdx=null;
+function showCombat(idx,card){
+  pendingIdx=idx;
+  const ex=document.getElementById('cm');if(ex)ex.remove();
+  const p=curP();
+  const canW=p.wpn&&(p.wlast===null||card.val<=p.wlast);
+  const wdmg=canW?Math.max(0,card.val-p.wpn.val):null;
+
+  const ov=document.createElement('div');ov.className='ov';ov.id='cm';
+  ov.onclick=e=>{if(e.target===ov)ov.remove()};
+  const sheet=document.createElement('div');sheet.className='sheet';
+
+  // 무기 사용 후 wlast 변화 예측
+  const nextWlast=card.val;
+  const wpnAfterNote=canW&&p.wpn
+    ?(nextWlast<(p.wlast??999)
+      ?`무기 사용 후 : ${nextWlast} 이하 몬스터에만 사용 가능`
+      :`무기 사용 후 : 제한 변동 없음`)
+    :'';
+
+  sheet.innerHTML=`
+    <h2>전투 방식 선택</h2>
+    <p style="margin-bottom:6px"><b>${SI[card.suit]}${card.rank}</b> 몬스터 — 에너지 ${card.val}</p>
+    ${p.wpn
+      ?`<p style="font-size:12px;background:var(--surface2);border-radius:6px;padding:7px 10px;margin-bottom:12px;text-align:left;line-height:1.7">
+          장착 무기: <b>${SI[p.wpn.suit]}${p.wpn.rank} (${p.wpn.val})</b>${p.wlast!==null?' · 현재 제한: '+p.wlast+' 이하':''}
+          ${canW?`<br>무기로 싸우면 피해 <b style="color:var(--blue)">${wdmg}</b> · ${wpnAfterNote}`
+                :`<br><span style="color:var(--red)">몬스터(${card.val}) > 최근 처치(${p.wlast}) — 무기 사용 불가</span>`}
+        </p>`
+      :''}
+  `;
+
+  const btns=document.createElement('div');btns.className='sheet-btns';
+
+  if(canW){
+    const b=document.createElement('button');b.className='pri';
+    b.innerHTML=`무기로 싸우기 <span style="font-weight:400;opacity:.85;font-size:12px">— 피해 ${wdmg}</span>`;
+    b.onclick=()=>{ov.remove();pickCard(pendingIdx,true)};btns.appendChild(b);
+  }
+  const b2=document.createElement('button');b2.className='sec';
+  b2.innerHTML=`맨손으로 싸우기 <span style="font-weight:400;opacity:.85;font-size:12px">— 피해 ${card.val}</span>`;
+  b2.onclick=()=>{ov.remove();pickCard(pendingIdx,false)};btns.appendChild(b2);
+
+  const bc=document.createElement('button');bc.className='dng';bc.textContent='취소';bc.onclick=()=>ov.remove();btns.appendChild(bc);
+  sheet.appendChild(btns);ov.appendChild(sheet);document.body.appendChild(ov);
+}
+
+function render(){
+  const app=document.getElementById('app');app.innerHTML='';
+  if(currentPage==='rules'){renderRules(app);return}
+  if(!G.players){renderSetup(app);return}
+  if(G.over){renderOver(app);return}
+  const solo=isSolo();
+
+  // 플레이어 패널
+  const pls=document.createElement('div');pls.className='players';
+  for(const p of G.players){
+    const pc=document.createElement('div');
+    pc.className='pcard'+(G.cur===p.id?' active':'')+(p.dead?' dead':'')+(solo?' solo':'');
+    const pct=Math.max(0,p.hp/p.max*100);
+    const bc=pct>60?'var(--green)':pct>30?'var(--amber)':'var(--red)';
+    pc.innerHTML=`
+      <div class="pheader">
+        <div class="pname">${!solo&&G.cur===p.id&&!p.dead?'<span class="pturn"></span>':''}<span>${p.name}</span></div>
+        ${p.wpn
+          ?`<span class="wpn-badge equipped">♦ ${SI[p.wpn.suit]}${p.wpn.rank} · ≤${p.wlast!==null?p.wlast:'∞'}까지</span>`
+          :`<span class="wpn-badge empty">♦ 없음</span>`}
+      </div>
+      <div class="php">${p.hp}<span> / ${p.max}</span></div>
+      <div class="phbw"><div class="phb" style="width:${pct}%;background:${bc}"></div></div>
+      ${p.wpn&&p.wlast===null?`<div class="wpn-limit">무기 제한 없음</div>`:''}
+    `;
+    pls.appendChild(pc);
+  }
+  app.appendChild(pls);
+
+  // 던전 카운터
+  const db=document.createElement('div');db.className='dungeon-bar';
+  const hasDk=G.dungeon.length>0;
+  db.innerHTML=`<span style="font-size:12px;color:var(--text2)">남은 구역</span>
+    <span style="font-size:15px;font-weight:600;color:${hasDk?'var(--blue)':'var(--text3)'}">${G.dungeon.length}칸</span>`;
+  app.appendChild(db);
+
+  // 로그
+  const lg=document.createElement('div');lg.className='log';lg.innerHTML=G.log;app.appendChild(lg);
+
+  // 방 카드
+  const rr=document.createElement('div');
+  const sl=document.createElement('div');sl.className='label';
+  const rc=document.createElement('div');rc.className='room-cards';
+
+  if(G.phase==='deal'&&G.carry){
+    sl.textContent='다음 구역 (이월 카드 있음)';
+    const ce=document.createElement('div');ce.className=`card ${ct(G.carry)} carry`;
+    ce.innerHTML=`<span class="cs">${SI[G.carry.suit]}</span><span class="cv">${G.carry.rank}</span><span class="ct">이월됨</span>`;
+    rc.appendChild(ce);
+    for(let i=0;i<3;i++){const ph=document.createElement('div');ph.className='card emp';ph.textContent='?';rc.appendChild(ph)}
+  }else if(G.phase==='play'){
+    sl.textContent=solo?'현재 구역':`현재 구역 — ${curP().name}의 턴`;
+    const done=G.proc>=3;
+    const p=curP();
+    for(let i=0;i<G.room.length;i++){
+      const c=G.room[i];const el=document.createElement('div');
+      if(!c){el.className='card used';rc.appendChild(el);continue}
+      const type=ct(c);el.className=`card ${type}`;
+      if(done)el.classList.add('dis');
+      if(type==='mon'){
+        const canW=p.wpn&&(p.wlast===null||c.val<=p.wlast);
+        const wdmg=canW?Math.max(0,c.val-p.wpn.val):null;
+        const badge=p.wpn
+          ?(canW
+            ?`<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:var(--blue-bg);color:var(--blue-text);margin-top:3px;font-weight:500;display:inline-block">♦ 피해 ${wdmg}</span>`
+            :`<span style="font-size:9px;padding:1px 5px;border-radius:3px;background:var(--red-bg);color:var(--red);margin-top:3px;font-weight:500;display:inline-block">♦ 사용불가</span>`)
+          :'';
+        el.innerHTML=`<span class="cs">${SI[c.suit]}</span><span class="cv">${c.rank}</span><span class="ct">몬스터 ${c.val}</span>${badge}`;
+      }else{
+        el.innerHTML=`<span class="cs">${SI[c.suit]}</span><span class="cv">${c.rank}</span><span class="ct">${type==='wpn'?'무기 '+c.val:'포션 +'+c.val}</span>`;
+      }
+      if(!done)el.addEventListener('click',()=>type==='mon'?showCombat(i,c):pickCard(i,false));
+      rc.appendChild(el);
+    }
+  }else{sl.textContent='다음 구역 진입 준비'}
+
+  rr.appendChild(sl);rr.appendChild(rc);
+  if(G.phase==='play'&&curP().wpn&&curP().wlast!==null){
+    const wi=document.createElement('div');wi.style.cssText='font-size:11px;color:var(--text3);margin:-4px 0 10px';
+    wi.textContent=`무기 사용 가능 최대 수치: ${curP().wlast}`;rr.appendChild(wi);}
+  app.appendChild(rr);
+
+  // 버튼
+  const brow=document.createElement('div');brow.className='brow';
+  if(G.phase==='deal'){
+    const db2=document.createElement('button');db2.className='pri';
+    db2.textContent=solo?'구역 진입 →':`구역 진입 → (${curP().name})`;
+    db2.disabled=G.dungeon.length===0&&!G.carry;
+    db2.onclick=deal;brow.appendChild(db2);
+  }
+  if(G.phase==='play'&&G.proc===0&&!G.lastAvoided){
+    const ab=document.createElement('button');ab.className='sec';ab.textContent='위험 감지 — 우회';ab.onclick=avoid;brow.appendChild(ab);
+  }
+  if(!solo&&curP().wpn&&G.players.filter(p=>!p.dead).length>1){
+    const nextIdx=(G.cur+1)%G.players.length;
+    const np=G.players[nextIdx];
+    const wb=document.createElement('button');wb.className='grn';
+    wb.textContent=`무기를 ${np.name}에게 넘기기`;wb.onclick=passWeapon;brow.appendChild(wb);
+  }
+  const rb=document.createElement('button');rb.className='dng';rb.textContent='처음부터';rb.onclick=()=>{G={};currentPage='game';render()};brow.appendChild(rb);
+  const rlb=document.createElement('button');rlb.className='sec';rlb.textContent='룰 보기';rlb.onclick=()=>{currentPage='rules';render()};brow.appendChild(rlb);
+  app.appendChild(brow);
+}
+
+function renderRules(app, from){
+  const wrap=document.createElement('div');wrap.className='rules-page';
+
+  const back=document.createElement('button');back.className='rules-back';
+  back.innerHTML='← 돌아가기';
+  back.onclick=()=>{currentPage='game';render()};
+  wrap.appendChild(back);
+
+  wrap.innerHTML+=`<h1>게임 룰</h1>`;
+  wrap.appendChild(back);
+
+  const sections=[
+    {
+      title:'카드 구성',
+      html:`<p>총 <b>44장</b>으로 플레이합니다. (조커, 빨간색 J/Q/K/A 제거)</p>
+        <table class="rules-table">
+          <tr><th>카드</th><th>수량</th><th>역할</th></tr>
+          <tr><td>♣ 클럽 / ♠ 스페이드 (2-A)</td><td>26장</td><td>몬스터 — 수치만큼 에너지 피해</td></tr>
+          <tr><td>♦ 다이아몬드 (2-10)</td><td>9장</td><td>무기 — 피해 경감</td></tr>
+          <tr><td>♥ 하트 (2-10)</td><td>9장</td><td>회복 포션 — 에너지 회복</td></tr>
+        </table>
+        <p><b>카드 수치 환산:</b> J=11, Q=12, K=13, A=14</p>`
+    },
+    {
+      title:'진행',
+      html:`<ul>
+          <li>매 턴 던전에서 카드 4장을 뒤집어 <b>구역</b>을 구성합니다.</li>
+          <li>4장 중 <b>3장을 선택해 처리</b>하고, 나머지 1장은 다음 구역으로 이월됩니다.</li>
+          <li>구역 전체를 <b>우회</b>할 수 있지만, 연속으로 두 번은 불가능합니다.</li>
+        </ul>
+        <h3>다인 플레이에서의 우회</h3>
+        <p>한 플레이어가 우회하면 카드들이 던전 맨 아래로 밀리고 턴이 다음 플레이어에게 넘어갑니다. 다음 플레이어는 반드시 새 구역을 탐색해야 하며 연속 우회는 불가능합니다. 우회를 반복하면 강한 카드들이 후반에 몰려 불리해질 수 있습니다.</p>`
+    },
+    {
+      title:'전투',
+      html:`<h3>맨손 전투</h3>
+        <p>몬스터 에너지만큼 피해를 받습니다.</p>
+        <h3>무기 전투</h3>
+        <p><b>몬스터 에너지 - 무기 수치 = 받는 피해</b> (0 미만이면 피해 없음)</p>
+        <div class="rules-code">예: 무기(5) vs 몬스터(8) → 피해 3
+예: 무기(5) vs 몬스터(3) → 피해 0 (완전 방어)</div>`
+    },
+    {
+      title:'무기 사용 제한 (핵심 전략)',
+      html:`<p>무기로 몬스터를 처치한 이후에는, <b>처치한 몬스터 에너지 이하의 몬스터에게만</b> 해당 무기를 다시 사용할 수 있습니다. 무기 수치 자체는 변하지 않습니다.</p>
+        <div class="rules-code">예: 무기(5)로 몬스터(8) 처치 → 이후 ≤8 몬스터에게만 사용 가능
+예: 무기(5)로 몬스터(3) 처치 → 이후 ≤3 몬스터에게만 사용 가능 (불리!)</div>
+        <div class="tip-box"><p><b>전략 포인트:</b> 강한 몬스터부터 무기로 처리해야 사용 가능 범위가 넓게 유지됩니다. 약한 몬스터는 맨손으로 처리하세요.</p></div>
+        <h3>다인 플레이에서의 무기 전달</h3>
+        <p>자신의 턴에 <b>다음 순서 플레이어에게만</b> 무기를 넘길 수 있습니다. 사용 제한(≤N까지)도 함께 이어집니다. 무기를 넘긴 플레이어는 이후 맨손 전투만 가능합니다. 3-4인 플레이에서 특정 플레이어에게 전달하려면 중간 플레이어를 거쳐 릴레이해야 합니다.</p>`
+    },
+    {
+      title:'포션',
+      html:`<ul>
+          <li>수치만큼 에너지를 회복합니다.</li>
+          <li>에너지는 <b>20을 초과할 수 없습니다.</b></li>
+          <li>한 턴에 하나만 사용 가능합니다. 두 번째 포션은 버려집니다.</li>
+        </ul>`
+    },
+    {
+      title:'종료 및 점수',
+      html:`<ul>
+          <li>에너지가 0이 되면 <b>탈진(실패)</b>합니다.</li>
+          <li>던전 전체를 통과하면 <b>탈출 성공</b>입니다.</li>
+          <li><b>성공 시:</b> 생존자 에너지 합산이 점수</li>
+          <li><b>실패 시:</b> 남은 몬스터 에너지 합산만큼 패널티 (음수 점수)</li>
+        </ul>
+        <p>다인 플레이에서는 <b>한 명이라도 에너지 0이 되면 전원 실패</b>입니다.</p>`
+    },
+  ];
+
+  sections.forEach(s=>{
+    const sec=document.createElement('div');sec.className='rules-section';
+    sec.innerHTML=`<h2>${s.title}</h2>${s.html}`;
+    wrap.appendChild(sec);
+  });
+
+  const backBottom=document.createElement('button');backBottom.className='pri';
+  backBottom.style.cssText='width:100%;padding:13px;font-size:14px';
+  backBottom.textContent='← 게임으로 돌아가기';
+  backBottom.onclick=()=>{currentPage='game';render()};
+  wrap.appendChild(backBottom);
+
+  app.appendChild(wrap);
+}
+
+// 렌더에 룰 버튼 추가 (setupState에 page 관리)
+let currentPage='game'; // 'game' | 'rules'
+  const wrap=document.createElement('div');wrap.className='setup';
+  wrap.innerHTML='<h1>불한당들 <span style="font-size:14px;font-weight:400;color:var(--text2)">Bul-han-dang-deul · Scoundrels</span></h1><p class="sub">플레이어와 세계관을 설정하세요</p>';
+
+  const pl=document.createElement('div');pl.className='label';pl.textContent='플레이어 수';wrap.appendChild(pl);
+  const pnr=document.createElement('div');pnr.className='pnum-row';
+  for(const n of[1,2,3,4]){
+    const b=document.createElement('button');b.className='pnum-btn'+(setupState.count===n?' sel':'');
+    b.textContent=n;b.onclick=()=>{setupState.count=n;render()};pnr.appendChild(b);
+  }
+  wrap.appendChild(pnr);
+
+  const nl=document.createElement('div');nl.className='label';nl.textContent='플레이어 이름';wrap.appendChild(nl);
+  const ni=document.createElement('div');ni.className='name-inputs';
+  for(let i=0;i<setupState.count;i++){
+    const inp=document.createElement('input');inp.type='text';
+    inp.value=setupState.names[i];inp.placeholder=`플레이어 ${i+1}`;
+    inp.oninput=e=>{setupState.names[i]=e.target.value||`플레이어 ${i+1}`};
+    ni.appendChild(inp);
+  }
+  wrap.appendChild(ni);
+
+  const bgl=document.createElement('div');bgl.className='label';bgl.textContent='배경 설정';wrap.appendChild(bgl);
+  const presets=document.createElement('div');presets.className='bg-presets';
+  BG_PRESETS.forEach((p,i)=>{
+    const b=document.createElement('button');b.className='bg-preset-btn'+(setupState.bgPreset===i?' sel':'');
+    b.textContent=p.label;
+    b.onclick=()=>{
+      setupState.bgPreset=i;setupState.bgText=p.text;
+      const ta=document.getElementById('bg-ta');if(ta)ta.value=p.text;
+      document.querySelectorAll('.bg-preset-btn').forEach((btn,j)=>btn.classList.toggle('sel',j===i));
+    };
+    presets.appendChild(b);
+  });
+  wrap.appendChild(presets);
+
+  const ta=document.createElement('textarea');ta.id='bg-ta';
+  ta.value=setupState.bgText;ta.placeholder='배경을 자유롭게 입력하세요.';
+  ta.oninput=e=>{setupState.bgText=e.target.value;setupState.bgPreset=-1;
+    document.querySelectorAll('.bg-preset-btn').forEach(b=>b.classList.remove('sel'));
+  };
+  wrap.appendChild(ta);
+
+  const sb=document.createElement('button');sb.className='pri';sb.textContent='게임 시작 →';
+  sb.style.cssText='width:100%;padding:13px;font-size:15px';
+  sb.onclick=()=>initGame(
+    setupState.names.slice(0,setupState.count).map((n,i)=>n||`플레이어 ${i+1}`),
+    setupState.bgText||BG_PRESETS[0].text
+  );
+  wrap.appendChild(sb);
+
+  const rlb=document.createElement('button');rlb.className='sec';rlb.textContent='게임 룰 보기';
+  rlb.style.cssText='width:100%;padding:11px;font-size:13px;margin-top:8px';
+  rlb.onclick=()=>{currentPage='rules';render()};
+  wrap.appendChild(rlb);
+
+  app.appendChild(wrap);
+}
+
+function renderOver(app){
+  const solo=isSolo();
+  const s=G.score;
+  const hpSummary=G.players.map(p=>`${p.name}: ${p.dead?'전투불능':'생존 '+p.hp+'HP'}`).join(' / ');
+
+  const card=document.createElement('div');card.className='over-card';
+  card.innerHTML=`<h2>${G.won?'탈출 성공!':solo?'탈진':'전원 탈진'}</h2>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:4px">${G.won?(solo?'모든 구역을 통과했다.':'팀 전원이 살아 돌아왔다.'):(solo?'체력이 바닥나 쓰러졌다.':'한 명이 쓰러져 탐험이 중단됐다.')}</p>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:0">${hpSummary}</p>
+    <div class="sbig ${s>=0?'sp':'sn'}">${s>=0?'+':''}${s}</div>
+    <p style="font-size:12px;color:var(--text2)">${G.won?'최종 체력 합산':'남은 위협 패널티'}</p>`;
+
+  const previewLabel=document.createElement('div');previewLabel.className='label';previewLabel.style.marginTop='18px';previewLabel.textContent='플레이 기록';
+  card.appendChild(previewLabel);
+  const pre=document.createElement('div');pre.className='logpre';pre.textContent=buildMarkdown();card.appendChild(pre);
+
+  const brow=document.createElement('div');brow.style.cssText='display:flex;flex-direction:column;gap:8px;margin-top:4px';
+  const cb=document.createElement('button');cb.className='sec';cb.textContent='클립보드 복사';cb.onclick=copyLog;brow.appendChild(cb);
+  const dl=document.createElement('button');dl.className='sec';dl.textContent='.md 다운로드';dl.onclick=downloadLog;brow.appendChild(dl);
+  const rb=document.createElement('button');rb.className='pri';rb.textContent='다시 도전';rb.onclick=()=>{G={};render()};brow.appendChild(rb);
+  card.appendChild(brow);
+  app.appendChild(card);
+}
+
+// PWA 서비스 워커 등록
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+render();
+</script>
+</body>
+</html>
