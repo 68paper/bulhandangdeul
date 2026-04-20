@@ -225,5 +225,5 @@ bulhandangdeul/
 
 ## 크레딧
 
-- **원작**: Scoundrel by Zach Gage & Kurt Bieg (2011) — [ztelefonz.com](https://ztelefonz.com)
+- **원작**: Scoundrel by Zach Gage & Kurt Bieg (2011)
 - **불한당들 (Scoundrels) PWA**: 우치(Woochi) — 1인/협력 모드, 무기 UI, 덱 현황 표, 플레이 기록, 스토리 생성 연동 추가
