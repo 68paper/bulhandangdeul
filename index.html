@@ -133,6 +133,32 @@ textarea:focus{border-color:var(--blue)}
 /* 던전 카운터 */
 .dungeon-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:var(--surface2);border-radius:var(--r);border:1px solid var(--border)}
 
+/* 덱 현황 표 */
+.deck-table-wrap{margin-bottom:12px;overflow-x:auto}
+.deck-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+.deck-table th{padding:4px 2px;text-align:center;color:var(--text2);font-weight:500;border-bottom:1px solid var(--border);width:24px}
+.deck-table th.suit-col{width:22px;color:var(--text2)}
+.deck-table td{padding:3px 2px;text-align:center;color:var(--text3);border-bottom:.5px solid var(--border)}
+.deck-table td.suit-cell{color:var(--text2);font-size:13px}
+.deck-table td.used{color:var(--green);font-size:12px;font-weight:600}
+.deck-table td.na{color:var(--border2);font-size:10px}
+.deck-table tr:last-child td{border-bottom:none}
+.deck-table .suit-mon{color:#C0392B}
+.deck-table .suit-wpn{color:var(--blue)}
+.deck-table .suit-pot{color:var(--green)}
+
+/* 설정 토글 */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:.5px solid var(--border)}
+.toggle-row:last-of-type{border-bottom:none}
+.toggle-label{font-size:13px;color:var(--text)}
+.toggle-desc{font-size:11px;color:var(--text3);margin-top:2px}
+.toggle{position:relative;width:40px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--border2);border-radius:99px;cursor:pointer;transition:background .2s}
+.toggle-slider:before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s}
+.toggle input:checked+.toggle-slider{background:var(--blue)}
+.toggle input:checked+.toggle-slider:before{transform:translateX(16px)}
+
 /* 룰 페이지 */
 .rules-page{padding:4px 0 40px}
 .rules-page h1{font-size:20px;font-weight:600;margin-bottom:4px}
@@ -188,7 +214,7 @@ function showToast(msg){
 }
 
 let G={};
-let setupState={count:1,names:['플레이어 1','플레이어 2','플레이어 3','플레이어 4'],bgText:BG_PRESETS[0].text,bgPreset:0};
+let setupState={count:1,names:['플레이어 1','플레이어 2','플레이어 3','플레이어 4'],bgText:BG_PRESETS[0].text,bgPreset:0,showDeck:true};
 let gameLog=[],turnLog={},turnNum=0;
 
 function logTurnStart(pname,room){turnNum++;turnLog={turn:turnNum,player:pname,room:[...room],actions:[],carry:null}}
@@ -238,10 +264,11 @@ function downloadLog(){
   showToast('다운로드 완료!');
 }
 
-function initGame(playerNames,bgText){
+function initGame(playerNames,bgText,showDeck){
   const players=playerNames.map((name,i)=>({name,hp:20,max:20,wpn:null,wlast:null,dead:false,id:i}));
   G={dungeon:shuffle(buildDeck()),room:[],carry:null,players,cur:0,
-     lastAvoided:false,bgText,
+     lastAvoided:false,bgText,showDeck:showDeck!==false,
+     used:new Set(), // 처리된 카드 키 집합 (suit+rank)
      log:'탐험을 시작한다.',
      phase:'deal',proc:0,potUsed:false,over:false,won:false,score:0,lastPot:null};
   gameLog=[];turnLog={};turnNum=0;
@@ -281,6 +308,7 @@ function avoid(){
 function pickCard(idx,useWpn){
   if(G.phase!=='play'||!G.room[idx]||G.proc>=3)return;
   const c=G.room[idx];G.room[idx]=null;G.proc++;G.lastAvoided=false;
+  G.used.add(c.suit+c.rank); // 처리된 카드 기록
   const p=curP();const type=ct(c);
 
   if(type==='wpn'){
@@ -311,7 +339,13 @@ function pickCard(idx,useWpn){
     endGame(false);render();return;
   }
 
-  if(G.proc>=3){
+  // 방의 실제 카드 수를 기준으로 턴 종료 판단
+  // (마지막 방은 2장 이하일 수 있음 — carry + 던전 1장 등)
+  const totalInRoom=G.room.filter(c=>c!==null).length;
+  const roomSize=G.proc+totalInRoom; // 처음 방 크기 = 처리한 수 + 남은 수
+  const shouldEnd=G.proc>=3||(roomSize<3&&totalInRoom===0)||(roomSize<=2&&G.proc>=roomSize);
+
+  if(shouldEnd){
     const rem=G.room.filter(c=>c!==null);
     const carryCard=rem.length===1?rem[0]:null;
     if(carryCard){G.carry=carryCard;for(let i=0;i<G.room.length;i++)G.room[i]=null;}
@@ -333,6 +367,50 @@ function passWeapon(){
   p.wpn=null;p.wlast=null;
   G.log=`<b>${p.name}</b>이(가) <b>${np.name}</b>에게 무기를 넘겼다.`;
   logAction(msg);render();
+}
+
+function renderDeckTable(app){
+  if(!G.showDeck)return;
+  const wrap=document.createElement('div');wrap.className='deck-table-wrap';
+  const lbl=document.createElement('div');lbl.className='label';lbl.style.marginBottom='6px';lbl.textContent='덱 현황';
+  wrap.appendChild(lbl);
+
+  const table=document.createElement('table');table.className='deck-table';
+
+  // 헤더 행
+  const thead=document.createElement('tr');
+  const thEmpty=document.createElement('th');thEmpty.className='suit-col';thead.appendChild(thEmpty);
+  RANKS.forEach(r=>{const th=document.createElement('th');th.textContent=r;thead.appendChild(th)});
+  table.appendChild(thead);
+
+  // 4행: S, C, H, D
+  const SUIT_ROWS=[
+    {suit:'S',label:'♠',cls:'suit-mon',validRanks:RANKS},
+    {suit:'C',label:'♣',cls:'suit-mon',validRanks:RANKS},
+    {suit:'H',label:'♥',cls:'suit-pot',validRanks:['2','3','4','5','6','7','8','9','10']},
+    {suit:'D',label:'♦',cls:'suit-wpn',validRanks:['2','3','4','5','6','7','8','9','10']},
+  ];
+
+  SUIT_ROWS.forEach(row=>{
+    const tr=document.createElement('tr');
+    const tdSuit=document.createElement('td');tdSuit.className=`suit-cell ${row.cls}`;tdSuit.textContent=row.label;
+    tr.appendChild(tdSuit);
+    RANKS.forEach(r=>{
+      const td=document.createElement('td');
+      if(!row.validRanks.includes(r)){
+        td.className='na';td.textContent='—';
+      }else if(G.used.has(row.suit+r)){
+        td.className='used';td.textContent='✓';
+      }else{
+        td.textContent='';
+      }
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+
+  wrap.appendChild(table);
+  app.appendChild(wrap);
 }
 
 function endGame(won){
@@ -475,6 +553,9 @@ function render(){
     wi.textContent=`무기 사용 가능 최대 수치: ${curP().wlast}`;rr.appendChild(wi);}
   app.appendChild(rr);
 
+  // 덱 현황 표
+  renderDeckTable(app);
+
   // 버튼
   const brow=document.createElement('div');brow.className='brow';
   if(G.phase==='deal'){
@@ -566,6 +647,33 @@ function renderRules(app){
         </ul>
         <p>다인 플레이에서는 <b>한 명이라도 에너지 0이 되면 전원 실패</b>입니다.</p>`
     },
+    {
+      title:'UI 안내',
+      html:`<h3>무기 뱃지 (플레이어 패널 상단)</h3>
+        <table class="rules-table">
+          <tr><th>표시</th><th>의미</th></tr>
+          <tr><td>♦ 없음</td><td>무기 미장착 — 맨손 전투만 가능</td></tr>
+          <tr><td>♦ ♦7 · ≤∞까지</td><td>무기 장착, 사용 제한 없음</td></tr>
+          <tr><td>♦ ♦7 · ≤5까지</td><td>무기 장착, 에너지 5 이하 몬스터에만 사용 가능</td></tr>
+        </table>
+        <h3>몬스터 카드 뱃지</h3>
+        <p>무기 장착 시 각 몬스터 카드 하단에 자동 표시됩니다.</p>
+        <table class="rules-table">
+          <tr><th>뱃지</th><th>의미</th></tr>
+          <tr><td>♦ 피해 N (파란색)</td><td>무기 사용 가능 — 받는 피해 N</td></tr>
+          <tr><td>♦ 사용불가 (빨간색)</td><td>무기 사용 불가 — 맨손 전투 필요</td></tr>
+        </table>
+        <h3>덱 현황 표</h3>
+        <p>방 카드 아래에 44장 전체 구성이 표로 표시됩니다. (설정에서 켜고 끄기 가능)</p>
+        <table class="rules-table">
+          <tr><th>표시</th><th>의미</th></tr>
+          <tr><td>✓ (녹색)</td><td>이미 처리된 카드</td></tr>
+          <tr><td>빈칸</td><td>아직 던전에 남은 카드</td></tr>
+          <tr><td>—</td><td>이 게임에 포함되지 않는 카드 (하트/다이아 J/Q/K/A)</td></tr>
+        </table>
+        <h3>전투 선택 팝업</h3>
+        <p>몬스터 카드를 탭하면 전투 방식을 선택하는 팝업이 열립니다. 무기로 싸울 경우 이후 사용 제한이 어떻게 바뀌는지 미리 보여줍니다.</p>`
+    },
   ];
 
   sections.forEach(s=>{
@@ -574,8 +682,18 @@ function renderRules(app){
     wrap.appendChild(sec);
   });
 
+  const credit=document.createElement('div');
+  credit.style.cssText='margin-top:8px;padding:14px;background:var(--surface2);border-radius:var(--r);border:.5px solid var(--border);font-size:12px;color:var(--text2);line-height:1.7';
+  credit.innerHTML=`
+    <b style="color:var(--text);font-size:13px">크레딧</b><br>
+    원작: <b>Scoundrel</b> by Zach Gage & Kurt Bieg (2011)<br>
+    변형: <b>불한당들 (Scoundrels)</b> by 우치(Woochi)<br>
+    <span style="color:var(--text3);font-size:11px">1인/협력 모드 · 무기 UI · 덱 현황 표 · 플레이 기록 · 스토리 생성 연동</span>
+  `;
+  wrap.appendChild(credit);
+
   const backBottom=document.createElement('button');backBottom.className='pri';
-  backBottom.style.cssText='width:100%;padding:13px;font-size:14px';
+  backBottom.style.cssText='width:100%;padding:13px;font-size:14px;margin-top:12px';
   backBottom.textContent='← 게임으로 돌아가기';
   backBottom.onclick=()=>{currentPage='game';render()};
   wrap.appendChild(backBottom);
@@ -629,11 +747,30 @@ function renderSetup(app){
   };
   wrap.appendChild(ta);
 
+  // 옵션
+  const optLbl=document.createElement('div');optLbl.className='label';optLbl.textContent='옵션';wrap.appendChild(optLbl);
+  const optBox=document.createElement('div');optBox.style.cssText='background:var(--surface2);border-radius:var(--r);border:1px solid var(--border);padding:0 12px;margin-bottom:16px';
+
+  const toggleRow=document.createElement('div');toggleRow.className='toggle-row';
+  toggleRow.innerHTML=`
+    <div>
+      <div class="toggle-label">덱 현황 표시</div>
+      <div class="toggle-desc">처리된 카드를 표로 추적</div>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" id="toggle-deck" ${setupState.showDeck?'checked':''}>
+      <span class="toggle-slider"></span>
+    </label>`;
+  toggleRow.querySelector('#toggle-deck').onchange=e=>{setupState.showDeck=e.target.checked};
+  optBox.appendChild(toggleRow);
+  wrap.appendChild(optBox);
+
   const sb=document.createElement('button');sb.className='pri';sb.textContent='게임 시작 →';
   sb.style.cssText='width:100%;padding:13px;font-size:15px';
   sb.onclick=()=>initGame(
     setupState.names.slice(0,setupState.count).map((n,i)=>n||`플레이어 ${i+1}`),
-    setupState.bgText||BG_PRESETS[0].text
+    setupState.bgText||BG_PRESETS[0].text,
+    setupState.showDeck
   );
   wrap.appendChild(sb);
 
@@ -641,6 +778,14 @@ function renderSetup(app){
   rlb.style.cssText='width:100%;padding:11px;font-size:13px;margin-top:8px';
   rlb.onclick=()=>{currentPage='rules';render()};
   wrap.appendChild(rlb);
+
+  const credit=document.createElement('div');
+  credit.style.cssText='margin-top:20px;padding:12px;background:var(--surface2);border-radius:var(--r);border:.5px solid var(--border);font-size:11px;color:var(--text3);line-height:1.8;text-align:center';
+  credit.innerHTML=`
+    원작: <b style="color:var(--text2)">Scoundrel</b> by Zach Gage & Kurt Bieg (2011)<br>
+    변형: <b style="color:var(--text2)">불한당들</b> by 우치(Woochi)
+  `;
+  wrap.appendChild(credit);
 
   app.appendChild(wrap);
 }
